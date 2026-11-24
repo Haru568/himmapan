@@ -19,11 +19,11 @@ var Api = (function () {
   }
 
   // บันทึกผลการเล่น: เข้าคิวก่อนเสมอ แล้วค่อยส่ง
-  // รวมหลายแถวแล้วส่งทีเดียว (รอ 4 วินาที) เพื่อลดคำขอเมื่อเล่นพร้อมกันทั้งห้อง
+  // รวมหลายแถวแล้วส่งทีเดียว (รอ 10 วินาที) เพื่อลดคำขอเมื่อเล่นพร้อมกันทั้งห้อง
   var flushTimer = null;
   function log(row) {
     var q = loadQ(); q.push(row); saveQ(q);
-    if (!flushTimer) flushTimer = setTimeout(function () { flushTimer = null; flush(); }, 4000);
+    if (!flushTimer) flushTimer = setTimeout(function () { flushTimer = null; flush(); }, 10000);
   }
   var flushing = false;
   function flush() {
@@ -35,7 +35,7 @@ var Api = (function () {
       if (res && res.ok) { var rest = loadQ().slice(batch.length); saveQ(rest); }
     }).catch(function () {}).then(function () { flushing = false; });
   }
-  setInterval(flush, 15000);
+  setInterval(flush, 20000);
   window.addEventListener('online', flush);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
 
