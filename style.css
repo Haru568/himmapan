@@ -393,3 +393,54 @@ main { position: relative; z-index: 1; }
 .bonus-card { border-style: dashed; border-color: rgba(255, 225, 106, .6); }
 .bonus-card:not(.locked) { box-shadow: 0 0 22px rgba(255, 225, 106, .25); }
 .bonus-card small { color: #ffe16a; }
+
+/* ---------- โหมดตอบคำถาม ตีมอนสเตอร์ (24 พ.ย.) ---------- */
+.stage-path { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; width: min(1180px, 100%); margin: 0 auto; }
+.stage-card { position: relative; border-radius: 20px; border: 1px solid var(--line); background: var(--glass); backdrop-filter: blur(8px); overflow: hidden; text-align: left; transition: transform .2s, box-shadow .2s; }
+.stage-card:hover:not(.locked) { transform: translateY(-4px); }
+.stage-card.next { border-color: var(--gold2); box-shadow: 0 0 26px rgba(255, 210, 90, .45); animation: pulse 1.6s ease-in-out infinite; }
+.stage-card.done { border-color: rgba(120, 230, 160, .6); }
+.stage-card.locked { opacity: .55; }
+.stage-card.locked .stage-mon img { filter: brightness(0) !important; }
+.stage-mon { height: 150px; display: grid; place-items: end center; background: radial-gradient(circle at 50% 75%, rgba(255, 255, 255, .18), transparent 65%); }
+.stage-mon img { height: 140px; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+.stage-info { padding: 10px 14px 14px; display: grid; gap: 2px; }
+.stage-info small { color: var(--gold2); font-family: var(--head); }
+.stage-info b { font-family: var(--head); font-size: 18px; }
+.stage-info span { font-size: 13px; opacity: .8; }
+.stage-info em { font-style: normal; font-size: 13px; margin-top: 4px; color: var(--gold2); }
+.stage-path .stage-boss { width: auto; }
+.stage-path .stage-boss .npc-img { height: 150px; }
+.stage-path .stage-boss .npc-img img { height: 140px; }
+.repair-title { width: 100%; text-align: center; margin: 22px 0 4px; font-family: var(--head); font-size: 18px; text-shadow: 0 2px 8px #000; }
+.repair-title small { opacity: .75; font-size: 14px; }
+.repair-card { width: 230px; }
+.repair-card .npc-img { height: 150px; }
+.mon-img { filter: hue-rotate(var(--hue, 0deg)) saturate(1.3) drop-shadow(0 0 22px rgba(255, 255, 255, .35)); height: 82%; }
+.mon-img.hurt { filter: hue-rotate(var(--hue, 0deg)) brightness(2.2) drop-shadow(0 0 30px #fff); }
+.boss-me.hurt { animation: meHurt .45s ease; }
+@keyframes meHurt { 30% { transform: translateX(-14px) rotate(-4deg); filter: brightness(1.6) sepia(1) hue-rotate(-40deg); } }
+.battle-stage { height: 40vh; min-height: 280px; }
+.battle-q { width: min(980px, 100%); margin: 12px auto 0; padding: 16px 18px; position: relative; }
+.bq-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.q-text.big { font-size: 22px; margin: 0 0 10px; }
+.bq-code { margin: 0 0 12px; min-height: 0; }
+.choices.big { grid-template-columns: 1fr 1fr; }
+.choices.big .choice { font-size: 17px; padding: 14px; }
+.choices.big .choice code { font-family: inherit; }
+.choices.big .choice:disabled { opacity: .45; }
+.bq-next { position: absolute; right: 18px; bottom: 14px; font-size: 18px; animation: popin .4s ease; }
+#ba-fb { min-height: 26px; margin-top: 10px; padding-right: 150px; }
+@media (max-width: 900px) {
+  .stage-path { grid-template-columns: 1fr 1fr; }
+  .choices.big { grid-template-columns: 1fr; }
+  #ba-fb { padding-right: 0; padding-bottom: 54px; }
+  .battle-stage { height: 32vh; min-height: 220px; }
+  .q-text.big { font-size: 19px; }
+}
+@media (max-width: 600px) {
+  .boss-stage .boss-name h2 { font-size: 22px; }
+  .boss-stage .hpbar { top: 64px; width: 92vw; }
+  .boss-stage .taunt { top: 98px; right: 4px; font-size: 13px; max-width: 60vw; }
+}
+.boss-stage .hpbar { z-index: 3; }

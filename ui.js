@@ -1,6 +1,6 @@
 // หน้าจอทั้งหมดของเกม
 (function () {
-  var D = window.GameData, B = window.BossData;
+  var D = window.GameData, B = window.BossData, BT = window.BattleData;
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var esc = Blocks.esc;
   var IMG = function (id) { return '' + id + '.webp'; };
@@ -116,7 +116,7 @@
   function renderMap() {
     Fx.setScene('map');
     var el = $('#screen-map');
-    el.innerHTML = '<header class="topbar" id="tb-map"></header><div class="map-title"><h2>หิมพานต์ซิตี้</h2><p>ยักษ์บั๊กบุกเมือง! เลือกย่านเพื่อช่วยชาวเมืองซ่อมแอป</p></div><div class="map"></div>';
+    el.innerHTML = '<header class="topbar" id="tb-map"></header><div class="map-title"><h2>หิมพานต์ซิตี้</h2><p>ยักษ์บั๊กบุกเมือง! ตอบคำถามให้ถูกเพื่อปราบมัน</p></div><div class="map"></div>';
     topbar($('#tb-map'), function () { renderLogin(); });
     var map = $('.map', el);
     var pr = document.createElement('button');
@@ -126,8 +126,9 @@
     el.appendChild(pr);
     D.WORLDS.forEach(function (w) {
       var open = worldOpen(w.n);
-      var stars = w.quests.reduce(function (s, q) { return s + ((PROG.quests[q] && PROG.quests[q].stars) || 0); }, 0);
-      var max = w.quests.length * 3;
+      var main = stagesOf(w).length ? stagesOf(w) : w.quests;
+      var stars = main.reduce(function (s, q) { return s + ((PROG.quests[q] && PROG.quests[q].stars) || 0); }, 0);
+      var max = main.length * 3;
       var b = document.createElement('button');
       b.className = 'island ' + w.theme + (open ? '' : ' locked');
       b.style.left = w.pos.x + '%'; b.style.top = w.pos.y + '%';
@@ -135,7 +136,7 @@
         (open ? (max ? '<em>★ ' + stars + ' / ' + max + '</em>' : '<em>เร็ว ๆ นี้</em>') : '<em>🔒 ยังไม่เปิด</em>') + '</div>';
       b.onclick = function () {
         if (!open) { Sfx.wrong(); Fx.shake(b); return; }
-        if (!w.quests.length) { Sfx.wrong(); toast('ย่านนี้กำลังสร้าง จะเปิดในสัปดาห์ที่ ' + w.week); return; }
+        if (!w.quests.length && !stagesOf(w).length) { Sfx.wrong(); toast('ย่านนี้กำลังสร้าง จะเปิดในสัปดาห์ที่ ' + w.week); return; }
         Sfx.tap(); renderWorld(w.n);
       };
       map.appendChild(b);
@@ -147,8 +148,9 @@
   var currentWorld = 1;
   function bossGateOpen(w) {
     if (Api.online()) return !!(SERVER.boss && SERVER.boss.open && SERVER.boss.week === w.week);
-    return CONFIG.OFFLINE_BOSS_AFTER_QUESTS && w.quests.every(questDone);
+    return CONFIG.OFFLINE_BOSS_AFTER_QUESTS && (stagesOf(w).length ? stagesOf(w) : w.quests).every(questDone);
   }
+  function stagesOf(w) { return (BT && BT.ORDER[w.n]) || []; }
   function renderWorld(n) {
     currentWorld = n;
     var w = D.WORLDS[n - 1];
@@ -158,21 +160,44 @@
     topbar($('#tb-world'), renderMap);
     $('.practice-link', el).onclick = function () { Sfx.tap(); renderPractice(w.week, function () { renderWorld(n); }); };
     var box = $('.npcs', el);
+    var stg = stagesOf(w);
+    if (stg.length) {
+      var path = document.createElement('div'); path.className = 'stage-path';
+      stg.forEach(function (sid, i) {
+        var st = BT.STAGES[sid];
+        var locked = i > 0 && !questDone(stg[i - 1]);
+        var pr = PROG.quests[sid];
+        var c = document.createElement('button');
+        c.className = 'stage-card' + (locked ? ' locked' : '') + (pr && pr.done ? ' done' : '') + (!locked && !(pr && pr.done) ? ' next' : '');
+        c.innerHTML = '<div class="stage-mon"><img src="' + IMG('boss-yak-wat-chaeng') + '" style="filter:hue-rotate(' + st.hue + 'deg) saturate(1.3)" alt=""></div>' +
+          '<div class="stage-info"><small>ด่านที่ ' + st.n + '</small><b>' + esc(st.title) + '</b><span>' + esc(st.monster) + ' · ' + st.qs.length + ' ข้อ</span>' +
+          '<em>' + (locked ? '🔒 ผ่านด่านก่อนหน้าก่อน' : pr && pr.done ? stars(pr.stars) + ' เล่นซ้ำได้' : '⚔ แตะเพื่อสู้!') + '</em></div>';
+        c.onclick = function () { if (locked) { Sfx.wrong(); Fx.shake(c); toast('ผ่านด่านก่อนหน้าก่อนนะ'); return; } Sfx.tap(); startBattle(sid); };
+        path.appendChild(c);
+      });
+      box.appendChild(path);
+    }
+    var allStages = stg.every(questDone);
+    if (stg.length && w.quests.length) {
+      var sep = document.createElement('div'); sep.className = 'repair-title';
+      sep.innerHTML = '🔧 ด่านท้าทาย: ซ่อมแอปของจริง <small>(ไม่บังคับ · ได้ดาวเพิ่ม)</small>';
+      box.appendChild(sep);
+    }
     w.quests.forEach(function (qid, i) {
       var q = D.QUESTS[qid];
-      var locked = i > 0 && !questDone(w.quests[i - 1]);
+      var locked = stg.length ? !allStages : i > 0 && !questDone(w.quests[i - 1]);
       var pr = PROG.quests[qid];
       var card = document.createElement('button');
-      card.className = 'npc-card' + (locked ? ' locked' : '') + (pr && pr.done ? ' done' : '');
+      card.className = 'npc-card' + (stg.length ? ' repair-card' : '') + (locked ? ' locked' : '') + (pr && pr.done ? ' done' : '');
       card.innerHTML = '<div class="npc-img"><img src="' + IMG(q.owner) + '" alt="' + esc(q.ownerName) + '">' + (!locked && !(pr && pr.done) ? '<span class="bang">!</span>' : '') + '</div>' +
         '<div class="npc-info"><small>ภารกิจที่ ' + (i + 1) + ' · ' + esc(q.ownerName) + '</small><b>' + esc(q.title) + '</b><span>' + esc(q.appName) + '</span>' +
-        '<em>' + (locked ? '🔒 ผ่านภารกิจก่อนหน้าก่อน' : pr && pr.done ? stars(pr.stars) + ' เล่นซ้ำได้' : 'แตะเพื่อเริ่มภารกิจ') + '</em></div>';
+        '<em>' + (locked ? (stg.length ? '🔒 ผ่านด่าน 1–' + stg.length + ' ก่อน' : '🔒 ผ่านภารกิจก่อนหน้าก่อน') : pr && pr.done ? stars(pr.stars) + ' เล่นซ้ำได้' : 'แตะเพื่อเริ่มภารกิจ') + '</em></div>';
       card.onclick = function () { if (locked) { Sfx.wrong(); Fx.shake(card); return; } Sfx.tap(); startQuest(qid); };
       box.appendChild(card);
     });
     (w.bonus || []).forEach(function (qid) {
       var q = D.QUESTS[qid];
-      var locked = !w.quests.every(questDone);
+      var locked = !(stg.length ? allStages : true) || !w.quests.every(questDone);
       var pr = PROG.quests[qid];
       var card = document.createElement('button');
       card.className = 'npc-card bonus-card' + (locked ? ' locked' : '') + (pr && pr.done ? ' done' : '');
@@ -188,9 +213,10 @@
     var g = document.createElement('button');
     g.className = 'npc-card boss-gate' + (open ? ' open' : ' locked');
     g.innerHTML = '<div class="npc-img"><img src="' + IMG(boss.img) + '" alt="' + esc(boss.name) + '"></div><div class="npc-info"><small>บอสประจำสัปดาห์</small><b>' + esc(boss.name) + '</b>' +
-      '<span>ทั้งห้องช่วยกันโจมตี</span><em>' + (open ? (beat ? 'ปราบแล้ว! เข้าไปดูได้' : '⚔ ประตูเปิดแล้ว!') : Api.online() ? '🔒 รอครูเปิดประตูบอส' : '🔒 ผ่านภารกิจให้ครบเพื่อเปิด') + '</em></div>';
+      '<span>ทั้งห้องช่วยกันโจมตี</span><em>' + (open ? (beat ? 'ปราบแล้ว! เข้าไปดูได้' : '⚔ ประตูเปิดแล้ว!') : Api.online() ? '🔒 รอครูเปิดประตูบอส' : '🔒 ผ่านทุกด่านเพื่อเปิด') + '</em></div>';
     g.onclick = function () { if (!open) { Sfx.wrong(); Fx.shake(g); return; } Sfx.tap(); startBoss(w.boss); };
-    box.appendChild(g);
+    var pathEl = $('.stage-path', box);
+    if (pathEl) { g.classList.add('stage-boss'); pathEl.appendChild(g); } else box.appendChild(g);
     show('screen-world');
   }
   function stars(n) { var s = ''; for (var i = 0; i < 3; i++) s += i < n ? '★' : '☆'; return '<span class="stars">' + s + '</span>'; }
@@ -561,6 +587,98 @@
     [0, 1, 2].forEach(function (i) { if (i < s) setTimeout(Sfx.star, 300 + i * 350); });
   }
 
+  // ---------- โหมดตอบคำถาม ตีมอนสเตอร์ ----------
+  var BA = null;
+  function startBattle(sid) {
+    var st = BT.STAGES[sid];
+    var w = D.WORLDS[st.world - 1];
+    Fx.setScene(w.theme);
+    QS = { firstPlay: !questDone(sid) };
+    BA = { st: st, w: w, i: 0, wrong: 0, wrongTotal: 0, combo: 0, hp: st.qs.length, t0: Date.now(), ts: Date.now(), busy: false };
+    var el = $('#screen-battle');
+    el.innerHTML = '<header class="topbar" id="tb-battle"></header>' +
+      '<div class="boss-stage battle-stage"><div class="boss-name"><small>ด่านที่ ' + st.n + ' · ' + esc(st.title) + '</small><h2>' + esc(st.monster) + '</h2></div>' +
+      '<div class="hpbar"><i id="ba-hp"></i><span id="ba-hptext"></span></div>' +
+      '<div class="taunt" id="ba-say"></div><img id="ba-mon" class="boss-img mon-img" src="' + IMG('boss-yak-wat-chaeng') + '" style="--hue:' + st.hue + 'deg" alt="">' +
+      '<img class="boss-me" id="ba-me" src="' + IMG(P.character) + '" alt=""></div>' +
+      '<section class="panel battle-q" id="ba-q"></section>';
+    topbar($('#tb-battle'), function () { BA = null; renderWorld(w.n); });
+    show('screen-battle');
+    baHp(); baSay(st.intro); baAsk();
+  }
+  function baHp() {
+    $('#ba-hp').style.width = (BA.hp / BA.st.qs.length * 100) + '%';
+    $('#ba-hptext').textContent = '❤ ' + BA.hp + ' / ' + BA.st.qs.length + '  ·  ข้อ ' + Math.min(BA.i + 1, BA.st.qs.length) + ' จาก ' + BA.st.qs.length;
+  }
+  function baSay(t) { var s = $('#ba-say'); if (!s) return; s.textContent = t; s.classList.remove('pop'); void s.offsetWidth; s.classList.add('pop'); }
+  function baAsk() {
+    var q = BA.st.qs[BA.i];
+    BA.wrong = 0; BA.ts = Date.now(); BA.busy = false;
+    var order = shuffle([0, 1, 2, 3]);
+    var box = $('#ba-q');
+    box.innerHTML = '<div class="bq-head"><span class="q-type">⚔ ข้อ ' + (BA.i + 1) + '</span><div class="q-text big">' + esc(q.q) + '</div></div>' +
+      (q.code ? '<div class="code-area bq-code" id="ba-code"></div>' : '') +
+      '<div class="choices big">' + order.map(function (i, k) { return '<button class="choice" data-i="' + i + '"><span>' + 'กขคง'[k] + '</span><code>' + esc(q.choices[i]) + '</code></button>'; }).join('') + '</div>' +
+      '<div class="feedback" id="ba-fb"></div>';
+    if (q.code) Blocks.renderCode($('#ba-code'), q.code.map(function (l, n) { return { id: 'c' + n, cat: l[0], indent: l[1], text: l[2] }; }));
+    box.querySelectorAll('.choice').forEach(function (b) {
+      b.onclick = function () {
+        if (!BA || BA.busy || b.disabled) return;
+        var fb = $('#ba-fb');
+        if (Number(b.dataset.i) === 0) {
+          BA.busy = true;
+          box.querySelectorAll('.assist').forEach(function (e) { e.classList.remove('assist'); });
+          b.classList.add('ok');
+          if (BA.wrong === 0) BA.combo++; else BA.combo = 0;
+          var cheer = BA.wrong === 0 ? ['เยี่ยม!', 'สุดยอด!', 'เก่งมาก!'][Math.floor(Math.random() * 3)] : 'ถูกแล้ว!';
+          fb.className = 'feedback good'; fb.innerHTML = '<b>' + cheer + '</b> ' + esc(q.why) + (BA.combo >= 2 ? ' <span class="combo-tag">🔥 คอมโบ x' + BA.combo + '</span>' : '');
+          Api.log(row({ quest: BA.st.id, step: BA.i + 1, stepType: 'quiz', attempts: BA.wrong + 1, firstTry: BA.wrong ? 0 : 1, seconds: Math.round((Date.now() - BA.ts) / 1000) }));
+          baHit();
+          var last = BA.i === BA.st.qs.length - 1;
+          var nx = document.createElement('button'); nx.className = 'btn gold bq-next'; nx.textContent = last ? 'ชนะแล้ว! ›' : 'ข้อต่อไป ›';
+          nx.onclick = function () { Sfx.tap(); if (last) baWin(); else { BA.i++; baHp(); baAsk(); } };
+          box.appendChild(nx);
+        } else {
+          BA.wrong++; BA.wrongTotal++; BA.combo = 0;
+          b.classList.add('no'); b.disabled = true; Sfx.wrong(); Fx.shake(box);
+          var me = $('#ba-me'); me.classList.remove('hurt'); void me.offsetWidth; me.classList.add('hurt');
+          baSay(['ฮ่า ๆ ผิดแล้ว!', 'หลบได้! ลองอีกที', 'เกือบแล้ว ฮึ่ม!'][Math.floor(Math.random() * 3)]);
+          if (BA.wrong >= 2) { fb.className = 'feedback bad'; fb.innerHTML = '<b>ไม่เป็นไร!</b> ✨ แตะคำตอบที่เรืองแสงได้เลย'; box.querySelector('.choice[data-i="0"]').classList.add('assist'); }
+          else { fb.className = 'feedback bad'; fb.innerHTML = '<b>ยังไม่ถูก</b> 💡 ' + (q.code ? 'ลองอ่านบล็อกโค้ดอีกครั้ง แล้วเลือกใหม่' : 'ลองคิดอีกครั้ง แล้วเลือกใหม่'); }
+        }
+      };
+    });
+  }
+  function baHit() {
+    Sfx.hit();
+    var img = $('#ba-mon'); Fx.shake(img); img.classList.add('hurt'); setTimeout(function () { img.classList.remove('hurt'); }, 300);
+    var me = $('#ba-me'); me.classList.remove('lunge'); void me.offsetWidth; me.classList.add('lunge');
+    var r = img.getBoundingClientRect();
+    Fx.floatText(r.left + r.width * 0.5, r.top + r.height * 0.3, '-' + BT.DMG, 'dmg');
+    if (BA.combo >= 2) setTimeout(function () { Fx.floatText(r.left + r.width * 0.5, r.top + r.height * 0.5, '🔥 คอมโบ x' + BA.combo, 'combo'); Sfx.star(); }, 300);
+    BA.hp--; baHp();
+    baSay(BA.hp ? ['โอ๊ย!', 'เจ็บนะ!', 'ไม่จริงน่า!', 'อั่ก!'][Math.floor(Math.random() * 4)] : 'ข้าแพ้แล้ว...');
+    if (!BA.hp) img.classList.add('defeated');
+  }
+  function baWin() {
+    var st = BA.st, s = BA.wrongTotal === 0 ? 3 : BA.wrongTotal <= 2 ? 2 : 1;
+    var prev = PROG.quests[st.id], first = !prev || !prev.done;
+    if (first) PROG.quests[st.id] = { done: true, stars: s, wrong: BA.wrongTotal, at: Date.now() };
+    saveProg();
+    Api.log(row({ quest: st.id, step: 'สรุป', stepType: 'complete', attempts: BA.wrongTotal, firstTry: '', seconds: Math.round((Date.now() - BA.t0) / 1000), stars: s }));
+    Sfx.win(); Fx.confetti();
+    var stg = stagesOf(BA.w), idx = stg.indexOf(st.id), nextId = stg[idx + 1];
+    modal('<div class="win"><img src="' + IMG(P.character) + '" class="win-me" alt="">' +
+      '<h2>ปราบ' + esc(st.monster) + 'สำเร็จ!</h2>' +
+      '<div class="big-stars">' + [0, 1, 2].map(function (i) { return '<span class="bs' + (i < s ? ' on' : '') + '" style="animation-delay:' + (0.3 + i * 0.35) + 's">★</span>'; }).join('') + '</div>' +
+      '<div class="muted">' + (first ? '+' + (s * 10) + ' XP' : 'เล่นซ้ำเพื่อฝึก (ดาวนับจากครั้งแรก)') + ' · ตอบผิดรวม ' + BA.wrongTotal + ' ครั้ง</div>' +
+      '<div class="modal-actions"><button class="btn" data-close="world">กลับแผนที่ด่าน</button>' + (nextId ? '<button class="btn gold" data-close="next">ด่านต่อไป ›</button>' : '') + '</div></div>', function (act) {
+      var w = BA.w.n; BA = null;
+      if (act === 'next' && nextId) startBattle(nextId); else renderWorld(w);
+    });
+    [0, 1, 2].forEach(function (i) { if (i < s) setTimeout(Sfx.star, 300 + i * 350); });
+  }
+
   // ---------- บอส ----------
   var BS = null;
   function startBoss(bid) {
@@ -601,7 +719,7 @@
     var q = BS.boss.pool[BS.cur];
     var order = shuffle([0, 1, 2, 3]);
     var box = $('#boss-q');
-    box.innerHTML = '<div class="q-type">⚔ ตอบให้ถูกเพื่อโจมตี</div><div class="q-text">' + esc(q.q) + '</div><div class="choices">' +
+    box.innerHTML = '<div class="q-type">⚔ ตอบให้ถูกเพื่อโจมตี</div><div class="q-text big">' + esc(q.q) + '</div><div class="choices">' +
       order.map(function (i, k) { return '<button class="choice" data-i="' + i + '"><span>' + 'กขคง'[k] + '</span>' + esc(q.choices[i]) + '</button>'; }).join('') + '</div><div class="feedback" id="b-fb"></div>';
     box.querySelectorAll('.choice').forEach(function (b) {
       b.onclick = function () {
