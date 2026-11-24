@@ -700,7 +700,7 @@
     topbar($('#tb-boss'), function () { stopBoss(); renderWorld(w.n); });
     show('screen-boss');
     hpDraw(); taunt(); nextQ(); side();
-    if (online) BS.poll = setInterval(function () { refreshBoard(); }, CONFIG.POLL_BOARD_MS);
+    if (online) { refreshBoard(); BS.poll = setInterval(function () { refreshBoard(); }, CONFIG.POLL_BOARD_MS); }
     BS.tauntTimer = setInterval(taunt, 9000);
   }
   function stopBoss() { if (BS) { clearInterval(BS.poll); clearInterval(BS.tauntTimer); BS.done = true; } }
