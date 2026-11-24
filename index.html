@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ช่างโค้ดแห่งหิมพานต์</title>
+<meta name="description" content="เกมเสริมการเรียนรู้การเขียนโปรแกรมด้วย Code.org App Lab ชั้นมัธยมศึกษาปีที่ 1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&family=Sarabun:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="scene"><div id="scene-art"></div><canvas id="scene-fx"></canvas><div class="vignette"></div></div>
+
+<main>
+  <section class="screen" id="screen-login"></section>
+  <section class="screen" id="screen-map"></section>
+  <section class="screen" id="screen-world"></section>
+  <section class="screen" id="screen-quest"></section>
+  <section class="screen" id="screen-boss"></section>
+  <section class="screen" id="screen-practice"></section>
+</main>
+
+<div id="modal" role="dialog" aria-modal="true"><div id="modal-box"></div></div>
+<div id="toast" role="status"></div>
+
+<script src="config.js"></script>
+<script src="sim.js"></script>
+<script src="data-quests.js"></script>
+<script src="data-boss.js"></script>
+<script src="data-spellbook.js"></script>
+<script src="audio.js"></script>
+<script src="fx.js"></script>
+<script src="api.js"></script>
+<script src="blocks.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
