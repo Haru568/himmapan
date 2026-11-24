@@ -1,4 +1,4 @@
-// ข้อมูลโลกและภารกิจ (ค่าในไฟล์นี้ตรวจกับข้อกำหนดแล้ว ห้ามแก้เอง)
+// ข้อมูลโลกและภารกิจ (ปรับให้ง่ายขึ้น 24 พ.ย. 2569: ภารกิจละ 3 ขั้น ขั้นยากย้ายไปด่านท้าทาย)
 (function (root) {
   function L(id, cat, indent, text) { return { id: id, cat: cat, indent: indent, text: text }; }
 
@@ -79,46 +79,35 @@
       id: 'w5-q1', week: 5, world: 1, owner: 'npc-phra-ram', ownerName: 'พระราม',
       title: 'ถนนข้ามไปลงกา',
       appName: 'แอปคำนวณพื้นที่',
-      intro: 'ศิษย์สำนักพระฤๅษีมาพอดี! ข้าต้องคำนวณพื้นที่แผ่นหินเพื่อสร้างถนนข้ามไปลงกา แต่ยักษ์บั๊กทำแอปของข้าพัง ช่วยข้าซ่อมที',
+      intro: 'ยักษ์บั๊กทำแอปคำนวณพื้นที่ของข้าพัง! ช่วยข้าซ่อมที',
       unlockPages: ['spell-5-2'],
       steps: [
         {
           type: 'match', design: areaDesign, code: areaCode, flow: areaFlow,
-          question: 'จับคู่ผังงานกับบล็อก: แตะกล่องในผังงาน แล้วแตะบล็อกที่ทำงานเดียวกัน',
+          question: 'แตะกล่องในผังงาน แล้วแตะบล็อกที่ทำงานเดียวกัน',
           pairs: { f0: ['b1'], f1: ['b2', 'b3'], f2: ['b4'], f3: ['b5'] },
-          hint: 'กล่องรับค่าคือบรรทัดที่อ่านค่าจากช่องกรอก กล่องแสดงค่าคือบรรทัดที่เปลี่ยนข้อความบนป้าย',
-          explain: 'ผังงานกับบล็อกคือสิ่งเดียวกัน! กล่องแต่ละกล่องกลายเป็นบล็อกหนึ่งหรือสองบรรทัด และทำงานเรียงจากบนลงล่าง'
+          hint: 'รับค่า = getNumber · แสดงค่า = setText',
+          explain: 'ผังงานกับบล็อกคือสิ่งเดียวกัน ทำงานจากบนลงล่าง!'
         },
         {
           type: 'predict', design: areaDesign, code: areaCode, flow: areaFlow,
           values: { widthInput: '5', lengthInput: '8' }, press: 'calcButton',
-          question: 'ถ้ากรอกความกว้าง 5 ความยาว 8 แล้วกดปุ่มคำนวณ แอปจะแสดงข้อความใด',
-          choices: ['พื้นที่ = 40 ตารางเซนติเมตร', 'พื้นที่ = 13 ตารางเซนติเมตร', 'พื้นที่ = 58 ตารางเซนติเมตร', 'พื้นที่ = NaN ตารางเซนติเมตร'],
+          question: 'กรอกกว้าง 5 ยาว 8 แล้วกดปุ่ม แอปจะขึ้นว่าอะไร',
+          choices: ['พื้นที่ = 40 ตารางเซนติเมตร', 'พื้นที่ = 13 ตารางเซนติเมตร', 'พื้นที่ = 58 ตารางเซนติเมตร', 'พื้นที่ = 3 ตารางเซนติเมตร'],
           answer: 0,
-          hint: 'ไล่ทีละบรรทัด: w เก็บ 5, l เก็บ 8 แล้ว area = w * l เครื่องหมาย * คือคูณ',
-          explain: '5 x 8 = 40 ถูกต้อง! แอปของข้าทำงานแล้ว ลองกด Run เล่นกับตัวเลขอื่นดูได้'
-        },
-        {
-          type: 'bug', design: areaDesignP, code: perimCodeBug, flow: perimFlow,
-          values: { widthInput: '5', lengthInput: '8' }, press: 'calcButton',
-          question: 'ข้าเพิ่มการคำนวณเส้นรอบรูป แต่กรอก 5 กับ 8 กลับได้ 116 แทนที่จะเป็น 26! แตะบล็อกที่ผิด',
-          badLines: ['b2', 'b3'], from: 'getText',
-          fixChoices: ['getNumber', 'getText', 'setText', 'onEvent'], fixAnswer: 'getNumber',
-          fixQuestion: 'ถูกแล้ว ต้องเปลี่ยน getText เป็นคำสั่งใด',
-          check: { id: 'perimeterLabel', text: 'เส้นรอบรูป = 26 เซนติเมตร' },
-          hint: 'getText อ่านค่าเป็นข้อความ "5" + "8" ของข้อความคือการต่อกันเป็น "58" แล้ว 2 x 58 = 116',
-          explain: 'getNumber อ่านค่าเป็นตัวเลข 5 + 8 จึงได้ 13 และ 2 x 13 = 26 ถูกต้อง! ยักษ์วัดแจ้งชอบแอบเปลี่ยนเป็น getText'
+          hint: 'area = w * l และ * คือคูณ → 5 x 8',
+          explain: '5 x 8 = 40 ถูกต้อง! ลองกด ▶ ลองรัน ดูได้'
         },
         {
           type: 'bug', design: areaDesign, code: idBugCode, flow: areaFlow,
           values: { widthInput: '5', lengthInput: '8' }, press: 'calcButton',
-          question: 'ยักษ์แก้โค้ดอีกแล้ว! กดปุ่มคำนวณแล้วไม่มีอะไรเกิดขึ้นเลย ดูข้อความเตือนใต้มือถือ แล้วแตะบล็อกที่ผิด',
+          question: 'กดปุ่มแล้วไม่มีอะไรเกิดขึ้น! แตะบล็อกที่ผิด',
           badLines: ['b1'], from: '"calcbutton"',
           fixChoices: ['"calcbutton"', '"calcButton"', '"CalcButton"', '"calc Button"'], fixAnswer: '"calcButton"',
-          fixQuestion: 'id ของปุ่มในหน้าจอคืออะไร (กด "แสดง id" ดูได้)',
+          fixQuestion: 'ปุ่มในหน้าจอชื่อ id อะไร (กด "แสดง id" ดูได้)',
           check: { id: 'resultLabel', text: 'พื้นที่ = 40 ตารางเซนติเมตร' },
-          hint: 'id ต้องตรงกับในหน้าจอทุกตัวอักษร รวมตัวพิมพ์เล็กพิมพ์ใหญ่',
-          explain: 'calcButton ตัว B ใหญ่ ตรงกับหน้าจอแล้ว ปุ่มจึงทำงาน! ถนนข้ามไปลงกาพร้อมสร้างแล้ว'
+          hint: 'ดูบรรทัดที่มีชื่อปุ่ม ตัวพิมพ์ใหญ่-เล็กต้องตรงกัน',
+          explain: 'calcButton ตัว B ใหญ่ ตรงกับหน้าจอแล้ว แอปใช้ได้!'
         }
       ]
     },
@@ -126,41 +115,61 @@
       id: 'w5-q2', week: 5, world: 1, owner: 'npc-sri-thanonchai', ownerName: 'ศรีธนญชัย',
       title: 'เทอร์โมมิเตอร์เจ้าเล่ห์',
       appName: 'แอปแปลงอุณหภูมิ',
-      intro: 'ข้าขายของให้พ่อค้าเมืองลังกาที่ใช้องศาฟาเรนไฮต์ แต่แอปแปลงหน่วยของข้ารวนจนเขาหาว่าข้าโกง! คราวนี้ข้าไม่ได้โกงจริง ๆ นะ ช่วยด้วย',
+      intro: 'แอปแปลงอุณหภูมิของข้ารวน คราวนี้ข้าไม่ได้โกงนะ ช่วยด้วย!',
       unlockPages: ['spell-5-3'],
       steps: [
         {
           type: 'order', design: tempDesign, code: tempCode, flow: tempFlow,
           wrapper: ['c1', 'c5'], items: ['c2', 'c3', 'c4'], values: { celsiusInput: '25' }, press: 'convertButton',
-          question: 'บล็อกในปุ่มหลุดออกมาหมด! แตะบล็อกเรียงตามลำดับที่ถูก',
-          hint: 'ต้องมีค่า c ก่อนจึงคำนวณ f ได้ และต้องคำนวณ f ก่อนจึงแสดงผลได้',
-          explain: 'รับค่า → คำนวณ → แสดงผล นี่คือหัวใจของโปรแกรมแบบลำดับ!'
+          question: 'บล็อกหลุด! แตะเรียงให้ถูกลำดับ',
+          hint: 'รับค่า → คำนวณ → แสดงผล',
+          explain: 'รับค่า → คำนวณ → แสดงผล คือหัวใจของโปรแกรมแบบลำดับ!'
         },
         {
           type: 'fill', design: tempDesign, code: tempFillCode, flow: tempFlow,
           values: { celsiusInput: '100' }, press: 'convertButton',
-          question: 'สูตรแปลงหายไป! แตะช่อง ? แล้วเลือกสูตรที่ถูก (ทดสอบด้วย 100 องศาเซลเซียส ต้องได้ 212 องศาฟาเรนไฮต์)',
-          blanks: { '1': { choices: ['c * 9 / 5 + 32', 'c + 32 * 9 / 5', 'c * 5 / 9 + 32', '(c + 32) * 9 / 5'], answer: 'c * 9 / 5 + 32' } },
+          question: 'สูตรหายไป! แตะช่อง ? แล้วเลือกสูตร (ดูผังงานช่วยได้)',
+          blanks: { '1': { choices: ['c * 9 / 5 + 32', 'c + 32', 'c * 5 / 9 + 32', 'c - 32'], answer: 'c * 9 / 5 + 32' } },
           check: { id: 'resultLabel', text: '100 °C = 212 °F' },
-          hint: 'สูตรคือ F = C x 9 ÷ 5 + 32 คูณและหารก่อน แล้วค่อยบวก 32',
-          explain: '100 x 9 ÷ 5 + 32 = 212 ถูกต้อง! พ่อค้าลังกาเชื่อข้าแล้ว'
+          hint: 'ผังงานเขียนว่า F = C x 9 ÷ 5 + 32',
+          explain: '100 x 9 ÷ 5 + 32 = 212 ถูกต้อง!'
         },
         {
           type: 'test', design: tempDesign, code: tempCode, flow: tempFlow,
           inputId: 'celsiusInput', press: 'convertButton', outputId: 'resultLabel',
-          question: 'ทดสอบแอปก่อนส่งมอบ: แตะค่าที่กรอกทางซ้าย แล้วแตะผลที่ต้องได้ทางขวา',
-          pairs: [['0', '0 °C = 32 °F'], ['100', '100 °C = 212 °F'], ['37', '37 °C = 98.6 °F'], ['-40', '-40 °C = -40 °F']],
-          hint: 'ลองคิดทีละค่า: 0 x 9 ÷ 5 + 32 = 32 และ 37 คืออุณหภูมิร่างกายปกติ',
-          explain: 'ทดสอบครบทุกแบบ ทั้งศูนย์ ค่าบวก ทศนิยม และค่าติดลบ แอปทำงานถูกหมด!'
+          question: 'ทดสอบแอป: แตะค่าทางซ้าย แล้วแตะผลทางขวา',
+          pairs: [['0', '0 °C = 32 °F'], ['100', '100 °C = 212 °F'], ['37', '37 °C = 98.6 °F']],
+          hint: 'ดูตัวเลขหน้า °C ทางขวา ต้องตรงกับค่าที่กรอก',
+          explain: 'ทดสอบครบ แอปทำงานถูกหมด!'
+        }
+      ]
+    },
+    'w5-bonus': {
+      id: 'w5-bonus', week: 5, world: 1, owner: 'npc-ruesi', ownerName: 'พระฤๅษี', bonus: true,
+      title: 'ด่านท้าทายของพระฤๅษี',
+      appName: 'สำหรับศิษย์ที่อยากเก่งขึ้น',
+      intro: 'เก่งมากศิษย์! ด่านนี้ยากขึ้น ข้าอยากรู้ว่าเจ้าจะผ่านไหม',
+      unlockPages: [],
+      steps: [
+        {
+          type: 'bug', design: areaDesignP, code: perimCodeBug, flow: perimFlow,
+          values: { widthInput: '5', lengthInput: '8' }, press: 'calcButton',
+          question: 'กรอก 5 กับ 8 เส้นรอบรูปควรได้ 26 แต่ได้ 116! แตะบล็อกที่ผิด',
+          badLines: ['b2', 'b3'], from: 'getText',
+          fixChoices: ['getNumber', 'getText', 'setText', 'onEvent'], fixAnswer: 'getNumber',
+          fixQuestion: 'ต้องเปลี่ยน getText เป็นคำสั่งใด',
+          check: { id: 'perimeterLabel', text: 'เส้นรอบรูป = 26 เซนติเมตร' },
+          hint: 'getText อ่านเป็นข้อความ "5"+"8" จึงต่อกันเป็น "58"',
+          explain: 'getNumber อ่านเป็นตัวเลข 5 + 8 = 13 และ 2 x 13 = 26 ถูกต้อง!'
         },
         {
           type: 'predict', design: tempDesign, code: tempCode, flow: tempFlow, showFirst: true,
           values: { celsiusInput: '' }, press: 'convertButton',
-          question: 'ลูกค้ากดปุ่มแปลงโดยไม่กรอกอะไรเลย แอปแสดงผลเป็น NaN สาเหตุคือข้อใด',
-          choices: ['ช่องกรอกว่าง getNumber จึงอ่านเป็นตัวเลขไม่ได้', 'ใช้สูตรคำนวณผิด', 'id ของปุ่มไม่ตรงกับหน้าจอ', 'ลืมใส่คำสั่ง setText'],
+          question: 'กดปุ่มโดยไม่กรอกอะไร แอปขึ้น NaN เพราะอะไร',
+          choices: ['ช่องว่าง getNumber จึงอ่านเป็นตัวเลขไม่ได้', 'ใช้สูตรผิด', 'id ของปุ่มผิด', 'ลืมใส่ setText'],
           answer: 0,
-          hint: 'NaN ย่อมาจาก Not a Number แปลว่า "ไม่ใช่ตัวเลข"',
-          explain: 'ช่องว่างหรือตัวอักษรอ่านเป็นตัวเลขไม่ได้ จึงได้ NaN ต้องบอกผู้ใช้ให้กรอกตัวเลขก่อนกดปุ่ม'
+          hint: 'NaN = Not a Number แปลว่า "ไม่ใช่ตัวเลข"',
+          explain: 'ช่องว่างอ่านเป็นตัวเลขไม่ได้ จึงได้ NaN ต้องกรอกตัวเลขก่อนกดปุ่ม'
         }
       ]
     }
@@ -168,7 +177,7 @@
 
   var WORLDS = [
     { n: 1, week: 5, name: 'ท่าน้ำลงกา', topic: 'การเขียนโปรแกรมแบบลำดับ', theme: 'dawn',
-      quests: ['w5-q1', 'w5-q2'], boss: 'yak', pos: { x: 17, y: 68 } },
+      quests: ['w5-q1', 'w5-q2'], bonus: ['w5-bonus'], boss: 'yak', pos: { x: 17, y: 68 } },
     { n: 2, week: 6, name: 'เกาะแก้วพิสดาร', topic: 'การเขียนโปรแกรมแบบเลือกทำ', theme: 'jungle',
       quests: [], boss: 'phisuea', pos: { x: 37, y: 40 } },
     { n: 3, week: 7, name: 'ค่ายหุ่นพยนต์', topic: 'การเขียนโปรแกรมแบบทำซ้ำ', theme: 'night',

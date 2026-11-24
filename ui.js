@@ -170,6 +170,18 @@
       card.onclick = function () { if (locked) { Sfx.wrong(); Fx.shake(card); return; } Sfx.tap(); startQuest(qid); };
       box.appendChild(card);
     });
+    (w.bonus || []).forEach(function (qid) {
+      var q = D.QUESTS[qid];
+      var locked = !w.quests.every(questDone);
+      var pr = PROG.quests[qid];
+      var card = document.createElement('button');
+      card.className = 'npc-card bonus-card' + (locked ? ' locked' : '') + (pr && pr.done ? ' done' : '');
+      card.innerHTML = '<div class="npc-img"><img src="' + IMG(q.owner) + '" alt="' + esc(q.ownerName) + '"></div>' +
+        '<div class="npc-info"><small>⭐ ด่านท้าทาย · ไม่บังคับ</small><b>' + esc(q.title) + '</b><span>' + esc(q.appName) + '</span>' +
+        '<em>' + (locked ? '🔒 ผ่านภารกิจหลักให้ครบก่อน' : pr && pr.done ? stars(pr.stars) + ' เล่นซ้ำได้' : 'ได้ดาวเพิ่ม!') + '</em></div>';
+      card.onclick = function () { if (locked) { Sfx.wrong(); Fx.shake(card); toast('ผ่านภารกิจหลักให้ครบก่อน'); return; } Sfx.tap(); startQuest(qid); };
+      box.appendChild(card);
+    });
     var boss = B.BOSSES[w.boss];
     var open = bossGateOpen(w);
     var beat = PROG.boss[boss.id] && PROG.boss[boss.id].won;
@@ -189,7 +201,7 @@
     var q = D.QUESTS[qid];
     var w = D.WORLDS[q.world - 1];
     Fx.setScene(w.theme);
-    QS = { q: q, i: 0, wrongTotal: 0, firstPlay: !questDone(qid), t0: Date.now(), runToken: 0 };
+    QS = { q: q, i: 0, wrongTotal: 0, combo: 0, firstPlay: !questDone(qid), t0: Date.now(), runToken: 0 };
     var el = $('#screen-quest');
     el.innerHTML =
       '<header class="topbar" id="tb-quest"></header>' +
@@ -227,7 +239,7 @@
 
   function renderStep() {
     var st = QS.q.steps[QS.i];
-    QS.st = st; QS.wrong = 0; QS.ts = Date.now(); QS.code = st.code.map(function (l) { return Object.assign({}, l); }); QS.fills = {};
+    QS.st = st; QS.wrong = 0; QS.assist = null; QS.ts = Date.now(); QS.code = st.code.map(function (l) { return Object.assign({}, l); }); QS.fills = {};
     QS.runToken++;
     dots();
     Blocks.renderPhone($('#q-phone'), st.design, st.values || {}, {});
@@ -267,14 +279,30 @@
   }
 
   function wrong(msg) {
-    QS.wrong++; QS.wrongTotal++;
+    QS.wrong++; QS.wrongTotal++; QS.combo = 0;
     Sfx.wrong(); Fx.shake($('#q-ask'));
-    var fb = $('#q-fb'); fb.className = 'feedback bad'; fb.innerHTML = '<b>ยังไม่ถูก</b> ' + esc(msg || QS.st.hint);
+    var fb = $('#q-fb'); fb.className = 'feedback bad';
+    if (QS.wrong >= 2) { fb.innerHTML = '<b>ไม่เป็นไร!</b> ✨ แตะที่กรอบเรืองแสงได้เลย'; assist(); }
+    else fb.innerHTML = '<b>ยังไม่ถูก</b> 💡 ' + esc(msg || QS.st.hint);
+  }
+  // ตัวช่วย: ผิด 2 ครั้งขึ้นไป ให้กรอบเรืองแสงที่คำตอบ (เกมยังบันทึกจำนวนครั้งที่ผิด)
+  function assist() {
+    if (!QS || QS.wrong < 2 || !QS.assist) return;
+    document.querySelectorAll('#screen-quest .assist').forEach(function (e) { e.classList.remove('assist'); });
+    [].concat(QS.assist() || []).forEach(function (e) { if (e) e.classList.add('assist'); });
   }
   function right(afterRun) {
     var st = QS.st;
     Sfx.right(); Fx.sparkle($('#q-ask'));
-    var fb = $('#q-fb'); fb.className = 'feedback good'; fb.innerHTML = '<b>ถูกต้อง!</b>';
+    document.querySelectorAll('#screen-quest .assist').forEach(function (e) { e.classList.remove('assist'); });
+    var ss = QS.wrong === 0 ? 3 : QS.wrong === 1 ? 2 : 1;
+    if (QS.wrong === 0) QS.combo++; else QS.combo = 0;
+    var cheer = ss === 3 ? ['เยี่ยม!', 'สุดยอด!', 'เก่งมาก!'][Math.floor(Math.random() * 3)] : ss === 2 ? 'ดีมาก!' : 'ผ่านแล้ว!';
+    var fb = $('#q-fb'); fb.className = 'feedback good';
+    fb.innerHTML = '<b>' + cheer + '</b> <span class="step-stars">' + '★★★'.slice(0, ss) + '<i>' + '★★★'.slice(ss) + '</i></span>' + (QS.combo >= 2 ? ' <span class="combo-tag">🔥 คอมโบ x' + QS.combo + '</span>' : '');
+    var ar = $('#q-ask').getBoundingClientRect();
+    Fx.floatText(ar.left + ar.width / 2, ar.top + 40, '+' + '★'.repeat(ss), 'gain');
+    if (QS.combo >= 2) setTimeout(function () { Fx.floatText(ar.left + ar.width / 2, ar.top + 90, '🔥 คอมโบ x' + QS.combo, 'combo'); Sfx.star(); }, 350);
     say(st.explain);
     logStep();
     var act = $('#q-actions');
@@ -310,6 +338,7 @@
         };
       });
     }
+    QS.assist = function () { return body.querySelector('.choice[data-i="' + st.answer + '"]'); };
     QS.answered = false;
     if (st.showFirst) {
       body.innerHTML = '<div class="hint-run">กำลังรันแอปให้ดูอาการ…</div>';
@@ -322,6 +351,11 @@
     var selF = null, matched = {}, total = Object.keys(st.pairs).length, n = 0;
     $('#q-body').innerHTML = '<div class="hint-run">แตะกล่องในผังงาน แล้วแตะบล็อกในโค้ดที่ตรงกัน · จับคู่แล้ว <b id="m-count">0</b>/' + total + '</div>';
     var root = $('#screen-quest');
+    QS.assist = function () {
+      if (selF) return st.pairs[selF].map(function (id) { return root.querySelector('#q-code [data-line="' + id + '"]'); });
+      var next = Object.keys(st.pairs).filter(function (k) { return !matched[k]; })[0];
+      return next ? root.querySelector('[data-flow="' + next + '"]') : null;
+    };
     root.querySelectorAll('.fnode').forEach(function (f) {
       if (!st.pairs[f.dataset.flow]) return;
       f.classList.add('pickable');
@@ -329,6 +363,7 @@
         if (matched[f.dataset.flow]) return;
         Sfx.tap(); selF = f.dataset.flow;
         root.querySelectorAll('.fnode').forEach(function (x) { x.classList.toggle('sel', x === f); });
+        assist();
       };
     });
     root.querySelectorAll('#q-code .line').forEach(function (ln) {
@@ -343,7 +378,7 @@
           root.querySelector('[data-flow="' + selF + '"]').classList.remove('sel');
           st.pairs[selF].forEach(function (lid) { var l = root.querySelector('#q-code [data-line="' + lid + '"]'); if (l) l.classList.add('matched', 'm' + color); });
           Sfx.star(); selF = null; $('#m-count').textContent = n;
-          if (n === total) right();
+          if (n === total) right(); else assist();
         } else wrong();
       };
     });
@@ -354,6 +389,10 @@
     var body = $('#q-body');
     body.innerHTML = '<div class="hint-run">กำลังรันแอปให้ดูอาการ…</div>';
     var phase = 1;
+    QS.assist = function () {
+      if (phase === 1) return st.badLines.map(function (id) { return $('#q-code [data-line="' + id + '"]'); });
+      if (phase === 2) return body.querySelector('.choice[data-v="' + CSS.escape(st.fixAnswer) + '"]');
+    };
     runCurrent(st.values, st.press).then(function () {
       body.innerHTML = '<div class="hint-run">👆 แตะบล็อกที่คิดว่าผิดในโค้ดด้านล่าง (กด ▶ ลองรัน ดูอาการซ้ำได้)</div>';
       armLines();
@@ -366,7 +405,7 @@
           if (st.badLines.indexOf(ln.dataset.line) >= 0) {
             phase = 2; Sfx.right();
             st.badLines.forEach(function (id) { var l = $('#q-code [data-line="' + id + '"]'); if (l) l.classList.add('buggy'); });
-            showFix();
+            showFix(); assist();
           } else { ln.classList.add('nope'); setTimeout(function () { ln.classList.remove('nope'); }, 600); wrong('บล็อกนี้ทำงานถูกแล้ว ลองดูบล็อกอื่น'); }
         };
       });
@@ -396,6 +435,12 @@
   function stepFill(st) {
     var body = $('#q-body');
     var keys = Object.keys(st.blanks);
+    var paletteOpen = null;
+    QS.assist = function () {
+      if (paletteOpen) return body.querySelector('.choice[data-v="' + CSS.escape(st.blanks[paletteOpen].answer) + '"]');
+      var bad = keys.filter(function (k) { return QS.fills[k] !== st.blanks[k].answer; })[0];
+      return bad ? $('#q-code .slot[data-slot="' + bad + '"]') : null;
+    };
     function armSlots() {
       $('#q-code').querySelectorAll('.slot').forEach(function (s) {
         s.onclick = function () { Sfx.tap(); openPalette(s.dataset.slot); };
@@ -406,13 +451,15 @@
       body.innerHTML = '<div class="hint-run">เลือกค่าสำหรับช่อง ?</div><div class="choices code-choices">' +
         shuffle(bl.choices).map(function (c) { return '<button class="choice mono' + (QS.fills[k] === c ? ' picked' : '') + '" data-v="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>';
       body.querySelectorAll('.choice').forEach(function (b) {
-        b.onclick = function () { Sfx.tap(); QS.fills[k] = b.dataset.v; drawCode(); armSlots(); idle(); };
+        b.onclick = function () { Sfx.tap(); QS.fills[k] = b.dataset.v; paletteOpen = null; drawCode(); armSlots(); idle(); };
       });
+      paletteOpen = k; assist();
     }
     function idle() {
       var all = keys.every(function (k) { return QS.fills[k]; });
       body.innerHTML = '<div class="hint-run">' + (all ? 'เติมครบแล้ว กดทดสอบเพื่อตรวจ หรือแตะช่องเพื่อเปลี่ยน' : '👆 แตะช่อง <span class="slot demo">?</span> ในโค้ดด้านล่าง') + '</div>';
       $('#q-actions').innerHTML = all ? '<button class="btn gold" id="btn-check">ทดสอบ</button>' : '';
+      assist();
       if (all) $('#btn-check').onclick = function () {
         this.disabled = true;
         runCurrent(st.values, st.press).then(function (res) {
@@ -444,6 +491,8 @@
       var pal = shuffleOnce.filter(function (id) { return placed.indexOf(id) < 0; });
       $('#q-body').innerHTML = '<div class="hint-run">แตะบล็อกด้านล่างตามลำดับที่ควรทำงาน</div><div class="palette">' +
         pal.map(function (id) { var l = full.filter(function (x) { return x.id === id; })[0]; return '<button class="pblk cat-' + l.cat + '" data-id="' + id + '">' + Blocks.esc(l.text) + '</button>'; }).join('') + '</div>';
+      QS.assist = function () { return $('#q-body .pblk[data-id="' + st.items[placed.length] + '"]'); };
+      assist();
       $('#q-body').querySelectorAll('.pblk').forEach(function (b) {
         b.onclick = function () {
           if (b.dataset.id === st.items[placed.length]) {
@@ -466,8 +515,12 @@
     var body = $('#q-body');
     body.innerHTML = '<div class="test-grid"><div class="tcol" id="t-left">' + left.map(function (v) { return '<button class="tcell in" data-v="' + esc(v) + '">กรอก <b>' + esc(v) + '</b></button>'; }).join('') +
       '</div><div class="tcol" id="t-right">' + rightCol.map(function (v) { return '<button class="tcell out" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div></div>';
+    QS.assist = function () {
+      if (selL != null) { var exp = st.pairs.filter(function (p) { return p[0] === selL; })[0][1]; return body.querySelector('.tcell.out[data-v="' + CSS.escape(exp) + '"]'); }
+      return body.querySelector('.tcell.in:not(.matched)');
+    };
     body.querySelectorAll('.tcell.in').forEach(function (b) {
-      b.onclick = function () { if (b.classList.contains('matched')) return; Sfx.tap(); selL = b.dataset.v; body.querySelectorAll('.tcell.in').forEach(function (x) { x.classList.toggle('sel', x === b); }); };
+      b.onclick = function () { if (b.classList.contains('matched')) return; Sfx.tap(); selL = b.dataset.v; body.querySelectorAll('.tcell.in').forEach(function (x) { x.classList.toggle('sel', x === b); }); assist(); };
     });
     body.querySelectorAll('.tcell.out').forEach(function (b) {
       b.onclick = function () {
@@ -479,7 +532,7 @@
           lb.classList.add('matched', 'm' + done); lb.classList.remove('sel'); b.classList.add('matched', 'm' + done);
           var v = {}; v[st.inputId] = selL; runCurrent(v, st.press, 150);
           Sfx.star(); selL = null;
-          if (done === st.pairs.length) setTimeout(function () { right(); }, 900);
+          if (done === st.pairs.length) setTimeout(function () { right(); }, 900); else assist();
         } else { b.classList.add('no'); setTimeout(function () { b.classList.remove('no'); }, 500); wrong(); }
       };
     });
