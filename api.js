@@ -19,9 +19,11 @@ var Api = (function () {
   }
 
   // บันทึกผลการเล่น: เข้าคิวก่อนเสมอ แล้วค่อยส่ง
+  // รวมหลายแถวแล้วส่งทีเดียว (รอ 4 วินาที) เพื่อลดคำขอเมื่อเล่นพร้อมกันทั้งห้อง
+  var flushTimer = null;
   function log(row) {
     var q = loadQ(); q.push(row); saveQ(q);
-    flush();
+    if (!flushTimer) flushTimer = setTimeout(function () { flushTimer = null; flush(); }, 4000);
   }
   var flushing = false;
   function flush() {
@@ -35,10 +37,36 @@ var Api = (function () {
   }
   setInterval(flush, 15000);
   window.addEventListener('online', flush);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
 
+  // ตีบอส: รวมความเสียหายทุก 2.5 วินาทีแล้วส่งครั้งเดียว ถ้าส่งไม่สำเร็จจะเก็บไว้ส่งรอบหน้า (ไม่หาย)
+  var pend = null, waiters = [], hitTimer = null, sending = false;
   function hit(data) {
     if (!online()) return Promise.resolve(null);
-    return post(Object.assign({ action: 'hit' }, data)).catch(function () { return null; });
+    if (!pend) pend = { room: data.room, week: data.week, guild: data.guild, number: data.number, damage: 0, count: 0 };
+    pend.damage += Number(data.damage) || 0; pend.count++;
+    var p = new Promise(function (res) { waiters.push(res); });
+    if (!hitTimer) hitTimer = setTimeout(sendHits, 2500);
+    return p;
+  }
+  function sendHits() {
+    hitTimer = null;
+    if (!pend || sending) { if (pend) hitTimer = setTimeout(sendHits, 2500); return; }
+    sending = true;
+    var batch = pend; pend = null;
+    var count = Math.min(10, batch.count), dmg = Math.min(batch.damage, count * 10);
+    if (batch.count > count) pend = Object.assign({}, batch, { damage: batch.damage - dmg, count: batch.count - count });
+    var ws = waiters; waiters = [];
+    post(Object.assign({ action: 'hit' }, batch, { damage: dmg, count: count })).then(function (res) {
+      if (!res || (!res.ok && res.error !== 'boss closed')) throw new Error('retry');
+      ws.forEach(function (w) { w(res); });
+    }).catch(function () {
+      if (pend) { pend.damage += dmg; pend.count += count; } else pend = Object.assign({}, batch, { damage: dmg, count: count });
+      ws.forEach(function (w) { w(null); });
+    }).then(function () {
+      sending = false;
+      if (pend && !hitTimer) hitTimer = setTimeout(sendHits, 3000);
+    });
   }
 
   // ดาวน์โหลดผลในเครื่องเป็น CSV (ใช้เมื่อเล่นแบบออฟไลน์)

@@ -8,5 +8,5 @@ var CONFIG = {
   // เมื่อออฟไลน์ ประตูบอสเปิดหลังผ่านภารกิจครบทุกภารกิจในโลก
   OFFLINE_BOSS_AFTER_QUESTS: true,
   POLL_CONFIG_MS: 30000,
-  POLL_BOARD_MS: 10000
+  POLL_BOARD_MS: 15000
 };
